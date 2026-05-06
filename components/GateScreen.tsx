@@ -59,8 +59,15 @@ export default function GateScreen({ onEnter }: Props) {
     if (!isValidEmail(email)) { setEmailError('Please enter a valid email address.'); return; }
     if (!agreed) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 500));
-    onEnter(email.trim().toLowerCase());
+    const clean = email.trim().toLowerCase();
+    // Store email server-side (fire-and-forget — don't block entry on failure)
+    fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: clean }),
+    }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 400));
+    onEnter(clean);
   };
 
   const canSubmit = isValidEmail(email) && agreed;

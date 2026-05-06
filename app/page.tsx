@@ -8,6 +8,7 @@ import SignalsList from '@/components/SignalsList';
 import NudgeCard from '@/components/NudgeCard';
 import Toast from '@/components/Toast';
 import GateScreen from '@/components/GateScreen';
+import Logo from '@/components/Logo';
 
 const GATE_KEY = 'stressscan_accepted';
 
@@ -66,20 +67,17 @@ export default function Home() {
           position: 'sticky', top: 0, zIndex: 10,
         }}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
+          <Logo size={34} variant="full" theme="light" />
+          {/* Live status dot */}
           <div
-            className="w-2 h-2 rounded-full"
+            className="w-1.5 h-1.5 rounded-full hidden sm:block"
             style={{
               background: isLimitReached ? '#ef4444' : result ? '#10b981' : '#94a3b8',
-              boxShadow: `0 0 0 3px ${isLimitReached ? '#fee2e2' : result ? '#d1fae5' : '#f1f5f9'}`,
+              boxShadow: `0 0 0 2px ${isLimitReached ? '#fee2e2' : result ? '#d1fae5' : '#f1f5f9'}`,
               transition: 'all 0.3s ease',
             }}
           />
-          <span className="font-semibold text-sm tracking-tight" style={{ color: '#1a1a2e' }}>StressScan</span>
-          <span className="text-xs px-2 py-0.5 rounded-full font-mono hidden sm:inline-block"
-            style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd' }}>
-            Claude Vision
-          </span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs hidden sm:block" style={{ color: '#9ca3af' }}>{userEmail}</span>

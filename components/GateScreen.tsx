@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Logo from '@/components/Logo';
 
 interface Props {
   onEnter: (email: string) => void;
@@ -103,23 +104,17 @@ export default function GateScreen({ onEnter }: Props) {
           style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)' }}
         >
           {/* Logo */}
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center mb-1"
-              style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)', boxShadow: '0 4px 14px rgba(14,165,233,0.35)' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-                <path d="M12 2a10 10 0 1 0 10 10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Logo size={48} variant="mark" theme="light" />
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1a1a2e' }}>
+                Welcome to StressScan
+              </h1>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: '#6b7280' }}>
+                AI-powered tension analysis via your webcam.<br />
+                No biometric data collected. No accounts created.
+              </p>
             </div>
-            <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#1a1a2e' }}>
-              Welcome to StressScan
-            </h1>
-            <p className="text-sm leading-relaxed" style={{ color: '#6b7280' }}>
-              AI-powered tension analysis via your webcam.<br />
-              No biometric data collected. No accounts created.
-            </p>
           </div>
 
           {/* Trust badges */}

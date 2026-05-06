@@ -206,6 +206,8 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
   const [phase,          setPhase]          = useState<ScanPhase>('live');
   const [shutterPressed, setShutterPressed] = useState(false);
   const [borderColor,    setBorderColor]    = useState<string | null>(null);
+  const [countdown,      setCountdown]      = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Camera
   useEffect(() => {
@@ -271,6 +273,26 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     hudDataRef.current = null;
   }, []);
 
+  // ── Countdown timer
+  const startCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdown(SCAN_TIMEOUT_MS / 1000);
+    countdownRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c === null || c <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          return null;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const stopCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdown(null);
+  }, []);
+
   // ── Shutter sound (Web Audio API — no file needed)
   const playShutterSound = useCallback(() => {
     try {
@@ -311,6 +333,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     setTimeout(() => setShutterPressed(false), 120);
 
     setPhase('analyzing');
+    startCountdown();
     syncSizes();
 
     // Save the frame at capture time (for accurate frozen display later)
@@ -342,6 +365,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
 
       const data = await res.json();
 
+      stopCountdown();
       if (data.error === 'limit_reached') { onLimitReached(); setPhase('live'); return; }
       if (data.error) { onError('Analysis error — please try again.'); setPhase('live'); return; }
 
@@ -359,11 +383,12 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     } catch (err: unknown) {
       clearTimeout(timeoutId);
       if (!mountedRef.current) return;
+      stopCountdown();
       const isAbort = err instanceof Error && err.name === 'AbortError';
-      onError(isAbort ? 'Scan timed out (7s). Try again.' : 'Network error — check your connection.');
+      onError(isAbort ? 'Scan timed out. Try again.' : 'Network error — check your connection.');
       setPhase('live');
     }
-  }, [phase, isLimitReached, syncSizes, animateOverlay, playShutterSound, onAnalysis, onLimitReached, onError]);
+  }, [phase, isLimitReached, syncSizes, animateOverlay, playShutterSound, startCountdown, stopCountdown, onAnalysis, onLimitReached, onError]);
 
   // ── Rescan: unfreeze, resume live
   const handleRescan = useCallback(() => {
@@ -605,8 +630,11 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
         {/* Right: scan history circles OR analyzing badge OR done */}
         <div className="absolute right-5 flex items-center gap-1.5">
           {isAnalyzing ? (
-            <span className="text-xs font-mono animate-fade-in" style={{ color: '#38bdf8' }}>
-              {SCAN_TIMEOUT_MS / 1000}s max
+            <span
+              className="text-xs font-mono animate-fade-in"
+              style={{ color: countdown !== null && countdown <= 5 ? '#f87171' : '#38bdf8' }}
+            >
+              {countdown !== null ? `${countdown}s` : '…'}
             </span>
           ) : phase === 'frozen' ? (
             <div className="flex items-center gap-1.5 animate-fade-in">

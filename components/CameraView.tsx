@@ -16,7 +16,7 @@ interface Props {
 
 type ScanPhase = 'live' | 'analyzing' | 'frozen';
 
-const SCAN_TIMEOUT_MS = 7000;
+const SCAN_TIMEOUT_MS = 25000;
 const SCAN_TOTAL = 20;
 
 // ─── Canvas helpers ────────────────────────────────────────────────────────────

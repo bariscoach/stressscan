@@ -1,4 +1,17 @@
-export type SignalType = 'shoulder' | 'neck' | 'brow' | 'jaw' | 'hands' | 'spine';
+export type SignalType =
+  | 'shoulder'
+  | 'neck'
+  | 'brow'
+  | 'jaw'
+  | 'hands'
+  | 'spine'
+  | 'frontalis'
+  | 'periorbital'
+  | 'nasolabial'
+  | 'temporalis'
+  | 'trapezius'
+  | 'respiratory';
+
 export type MoodTag = 'Calm' | 'Focused' | 'Tense' | 'Overloaded';
 
 export interface SignalRegion {
@@ -21,22 +34,28 @@ export interface AnalysisResult {
   mood_tag: MoodTag;
   nudge: string;
   signals: Signal[];
-  remaining: number; // scans remaining (0-5)
+  remaining: number;
 }
 
 export const SIGNAL_COLORS: Record<SignalType, string> = {
-  spine: '#00CCFF',
-  shoulder: '#FF4444',
-  neck: '#FFAA00',
-  brow: '#FF6B00',
-  jaw: '#CC44FF',
-  hands: '#FF4488',
+  spine:       '#00CCFF',
+  shoulder:    '#FF4444',
+  neck:        '#FFAA00',
+  brow:        '#FF6B00',
+  jaw:         '#CC44FF',
+  hands:       '#FF4488',
+  frontalis:   '#FFD60A',
+  periorbital: '#00E5CC',
+  nasolabial:  '#FF6B35',
+  temporalis:  '#B4FF39',
+  trapezius:   '#FF8FBF',
+  respiratory: '#74B9FF',
 };
 
 export const MOOD_COLORS: Record<MoodTag, string> = {
-  Calm: '#00CC66',
-  Focused: '#FFCC00',
-  Tense: '#FF8C00',
+  Calm:       '#00CC66',
+  Focused:    '#FFCC00',
+  Tense:      '#FF8C00',
   Overloaded: '#FF4444',
 };
 

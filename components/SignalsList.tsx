@@ -5,13 +5,33 @@ import { Signal, SIGNAL_COLORS, SignalType } from '@/lib/types';
 interface Props { signals: Signal[]; }
 
 const SIGNAL_LABELS: Record<SignalType, string> = {
-  spine: 'Spine', shoulder: 'Shoulder', neck: 'Neck',
-  brow: 'Brow', jaw: 'Jaw', hands: 'Hands',
+  spine:       'Spine',
+  shoulder:    'Shoulder',
+  neck:        'Neck',
+  brow:        'Brow',
+  jaw:         'Jaw',
+  hands:       'Hands',
+  frontalis:   'Frontalis',
+  periorbital: 'Periorbital',
+  nasolabial:  'Nasolabial',
+  temporalis:  'Temporalis',
+  trapezius:   'Trapezius',
+  respiratory: 'Respiratory',
 };
 
 const SIGNAL_BG: Record<SignalType, string> = {
-  spine: '#f0f9ff', shoulder: '#fef2f2', neck: '#fffbeb',
-  brow: '#fff7ed', jaw: '#faf5ff', hands: '#fdf2f8',
+  spine:       '#f0f9ff',
+  shoulder:    '#fef2f2',
+  neck:        '#fffbeb',
+  brow:        '#fff7ed',
+  jaw:         '#faf5ff',
+  hands:       '#fdf2f8',
+  frontalis:   '#fefce8',
+  periorbital: '#f0fdfb',
+  nasolabial:  '#fff4f0',
+  temporalis:  '#f7ffe0',
+  trapezius:   '#fff0f5',
+  respiratory: '#f0f7ff',
 };
 
 export default function SignalsList({ signals }: Props) {

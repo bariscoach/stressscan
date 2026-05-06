@@ -76,6 +76,60 @@ function drawSignal(ctx: CanvasRenderingContext2D, signal: Signal, W: number, H:
     }
     case 'hands':
       ctx.lineWidth = 2; ctx.strokeRect(rx, ry, rw, rh); break;
+
+    case 'frontalis': {
+      // Horizontal dashed lines across forehead (2 parallel furrow lines)
+      ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+      const lineGap = rh / 3;
+      for (let li = 0; li < 2; li++) {
+        const ly = ry + lineGap * (li + 1);
+        ctx.beginPath(); ctx.moveTo(rx, ly); ctx.lineTo(rx + rw, ly); ctx.stroke();
+      }
+      ctx.setLineDash([]); break;
+    }
+
+    case 'periorbital': {
+      // Ellipse around eye area
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(rx + rw / 2, ry + rh / 2, rw / 2, rh / 2, 0, 0, Math.PI * 2);
+      ctx.stroke(); break;
+    }
+
+    case 'nasolabial': {
+      // Two curved arcs at mouth corners (nasolabial folds)
+      ctx.lineWidth = 2;
+      const mx = rx + rw / 2, my = ry + rh / 2;
+      const aw = rw * 0.35, ah = rh * 0.6;
+      ctx.beginPath(); ctx.arc(mx - aw, my, ah, -Math.PI * 0.4, Math.PI * 0.4, false); ctx.stroke();
+      ctx.beginPath(); ctx.arc(mx + aw, my, ah, Math.PI * 0.6, Math.PI * 1.4, false); ctx.stroke();
+      break;
+    }
+
+    case 'temporalis': {
+      // Small arc bracket at temporal region
+      ctx.lineWidth = 2;
+      const tcx = rx + rw / 2, tcy = ry + rh / 2, tr = Math.min(rw, rh) * 0.45;
+      ctx.beginPath(); ctx.arc(tcx, tcy, tr, -Math.PI * 0.75, Math.PI * 0.75, false); ctx.stroke();
+      // dot at center
+      ctx.beginPath(); ctx.arc(tcx, tcy, 2.5, 0, Math.PI * 2); ctx.fill(); break;
+    }
+
+    case 'trapezius': {
+      // Inverted-V from neck base to shoulders (trapezius elevation)
+      ctx.lineWidth = 2;
+      const tx = rx + rw / 2, ty = ry;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(rx, ry + rh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(rx + rw, ry + rh); ctx.stroke(); break;
+    }
+
+    case 'respiratory': {
+      // Large arc across upper chest (clavicular breathing elevation)
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(rx + rw / 2, ry + rh, rw / 2, Math.PI, 0, false);
+      ctx.stroke(); break;
+    }
   }
 
   ctx.shadowBlur = 0;

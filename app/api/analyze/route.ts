@@ -21,21 +21,36 @@ const anthropic = new Anthropic({
 const SYSTEM_PROMPT =
   'You are a physical stress and tension analyzer. Analyze body language, posture, and facial tension only. Never identify who the person is.';
 
-const USER_PROMPT = `Analyze this person for physical stress and tension signals. Return ONLY valid JSON, no markdown, no explanation:
+const USER_PROMPT = `Analyze this person for physical stress and tension signals using visual biomechanical cues. Return ONLY valid JSON, no markdown, no explanation:
 {
   "stress_score": number (1-10),
   "mood_tag": "Calm" | "Focused" | "Tense" | "Overloaded",
   "nudge": "one short actionable grounding tip max 12 words",
   "signals": [
     {
-      "type": "shoulder" | "neck" | "brow" | "jaw" | "hands" | "spine",
+      "type": one of the signal types below,
       "severity": number (0-10),
       "detected": true,
-      "label": "2-4 word description",
+      "label": "2-5 word clinical description",
       "region": { "x": number, "y": number, "w": number, "h": number }
     }
   ]
 }
+
+Signal types to detect (only include detected ones):
+- "spine": spinal axial alignment deviation, postural kyphosis or forward lean
+- "shoulder": deltoid/supraspinatus tension, bilateral shoulder elevation asymmetry
+- "neck": sternocleidomastoid hypertonicity, cervical lateral flexion or forward head posture
+- "brow": corrugator supercilii contraction, procerus activation (glabellar furrow)
+- "jaw": masseter hypertrophy tension, mandibular clenching or TMJ strain
+- "hands": flexor digitorum tension, metacarpal guarding or fist formation
+- "frontalis": frontalis muscle activation, horizontal forehead rhytids under emotional load
+- "periorbital": orbicularis oculi strain, palpebral fissure narrowing or periorbital tightening
+- "nasolabial": orbicularis oris compression, nasolabial fold deepening, lip thinning
+- "temporalis": temporalis hypertonicity, temporal region tension indicating bruxism or clenching
+- "trapezius": upper trapezius hypertonia, shoulder girdle cranial displacement pattern
+- "respiratory": clavicular breathing pattern, thoracic elevation suggesting sympathetic arousal
+
 Region values are 0-1 fractions of image dimensions. Only include signals where detected is true.`;
 
 export async function POST(request: NextRequest) {

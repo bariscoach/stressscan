@@ -13,53 +13,43 @@ export default function NudgeCard({ nudge, nudgeKey }: Props) {
   useEffect(() => {
     if (!nudge) return;
     setAnimating(true);
-    const t = setTimeout(() => setAnimating(false), 4200); // 2s x 3 iterations ≈ but we cap
+    const t = setTimeout(() => setAnimating(false), 4500);
     return () => clearTimeout(t);
   }, [nudgeKey, nudge]);
 
   return (
     <div
-      className="glass p-4 relative overflow-hidden"
-      style={{
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        borderLeft: '2px solid rgba(0,204,255,0.4)',
-      }}
+      className="card p-5"
+      style={{ borderLeft: '3px solid #0ea5e9' }}
     >
-      <div
-        className="text-xs font-mono uppercase tracking-widest mb-2"
-        style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.14em' }}
-      >
-        Grounding Tip
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: '#f0f9ff' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M12 2a7 7 0 0 1 7 7c0 3.5-2 5.5-2 8H7c0-2.5-2-4.5-2-8a7 7 0 0 1 7-7z" />
+            <path d="M9 21h6M12 21v-4" />
+          </svg>
+        </div>
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9ca3af', letterSpacing: '0.1em' }}>
+          Grounding Tip
+        </span>
       </div>
 
       {nudge ? (
         <p
           key={nudgeKey}
-          className={`text-sm italic leading-relaxed ${animating ? 'animate-nudge-pulse' : ''}`}
-          style={{
-            color: 'rgba(255,255,255,0.72)',
-            fontStyle: 'italic',
-          }}
+          className={`text-sm leading-relaxed ${animating ? 'animate-nudge-pulse' : ''}`}
+          style={{ color: '#374151', fontStyle: 'italic' }}
         >
-          {nudge}
+          "{nudge}"
         </p>
       ) : (
-        <p
-          className="text-sm"
-          style={{ color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}
-        >
-          Tip will appear after first scan…
+        <p className="text-sm" style={{ color: '#d1d5db', fontStyle: 'italic' }}>
+          A grounding tip will appear after your first scan…
         </p>
       )}
-
-      {/* Accent glow */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-0.5"
-        style={{
-          background: 'linear-gradient(180deg, transparent, #00CCFF, transparent)',
-          opacity: 0.5,
-        }}
-      />
     </div>
   );
 }

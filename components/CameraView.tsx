@@ -4,8 +4,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { AnalysisResult, Signal, SIGNAL_COLORS, SignalType, getScoreColor } from '@/lib/types';
 
 interface Props {
-  scanInterval: number;
-  isPaused: boolean;
+  scanTrigger: number;       // increments to fire a scan
   isLimitReached: boolean;
   onAnalysis: (result: AnalysisResult) => void;
   onLimitReached: () => void;
@@ -206,8 +205,7 @@ function drawDataHUD(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CameraView({
-  scanInterval,
-  isPaused,
+  scanTrigger,
   isLimitReached,
   onAnalysis,
   onLimitReached,
@@ -221,7 +219,6 @@ export default function CameraView({
   const rafRef = useRef<number | null>(null);
   const signalsRef = useRef<Signal[]>([]);
   const hudDataRef = useRef<{ score: number; mood: string; count: number } | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
   // ── Camera init
@@ -367,36 +364,28 @@ export default function CameraView({
     }
   }, [onAnalysis, onLimitReached, onError, animateOverlay, syncCanvasSize]);
 
-  // ── Scan interval
+  // ── Fire scan when trigger increments
   useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (isPaused || isLimitReached) return;
-
-    intervalRef.current = setInterval(() => {
-      // Don't stack scans
-      if (scanStatus !== 'idle') return;
-      captureAndAnalyze();
-    }, scanInterval * 1000);
-
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [scanInterval, isPaused, isLimitReached, captureAndAnalyze, scanStatus]);
+    if (scanTrigger === 0 || isLimitReached) return;
+    captureAndAnalyze();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanTrigger]);
 
   // ── Camera error
   if (cameraError) {
     return (
-      <div className="glass flex flex-col items-center justify-center gap-4 text-center"
+      <div className="card flex flex-col items-center justify-center gap-4 text-center"
         style={{ aspectRatio: '16/9', maxWidth: 900, width: '100%' }}>
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-          style={{ color: 'rgba(255,255,255,0.3)' }}>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-            d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14m0 0V8m0 6H7a2 2 0 01-2-2V8a2 2 0 012-2h8m0 8v-8" />
-          <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-        </svg>
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#fef2f2' }}>
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14m0 0V8m0 6H7a2 2 0 01-2-2V8a2 2 0 012-2h8" />
+            <line x1="3" y1="3" x2="21" y2="21" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </div>
         <div>
-          <p className="text-base font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            Camera access denied
-          </p>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#374151' }}>Camera access denied</p>
+          <p className="text-xs" style={{ color: '#9ca3af' }}>
             Allow camera permissions in your browser settings,<br />then reload the page.
           </p>
         </div>
@@ -414,11 +403,13 @@ export default function CameraView({
         width: '100%',
         maxWidth: 900,
         aspectRatio: '16/9',
-        borderRadius: 12,
+        borderRadius: 16,
         border: isScanning
-          ? '1px solid rgba(0,204,255,0.5)'
-          : '1px solid rgba(255,255,255,0.08)',
-        boxShadow: isScanning ? '0 0 24px rgba(0,204,255,0.18)' : 'none',
+          ? '2px solid rgba(14,165,233,0.5)'
+          : '1px solid rgba(0,0,0,0.1)',
+        boxShadow: isScanning
+          ? '0 0 0 4px rgba(14,165,233,0.12), 0 4px 24px rgba(0,0,0,0.12)'
+          : '0 4px 24px rgba(0,0,0,0.08)',
         transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
       }}
     >
@@ -438,10 +429,10 @@ export default function CameraView({
         <div key={pos}
           className={`absolute ${pos.includes('t') ? 'top-3' : 'bottom-3'} ${pos.includes('l') ? 'left-3' : 'right-3'}`}
           style={{ pointerEvents: 'none' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path
               d={pos === 'tl' ? 'M0 8V0H8' : pos === 'tr' ? 'M16 8V0H8' : pos === 'bl' ? 'M0 8V16H8' : 'M16 8V16H8'}
-              stroke="#00CCFF" strokeWidth="1.5" opacity="0.5" />
+              stroke="rgba(255,255,255,0.6)" strokeWidth="2" />
           </svg>
         </div>
       ))}
@@ -451,55 +442,54 @@ export default function CameraView({
       {/* INITIATING */}
       {scanStatus === 'initiating' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
-          style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00CCFF' }} />
-            <span className="font-mono text-sm tracking-widest uppercase" style={{ color: '#00CCFF', letterSpacing: '0.2em' }}>
-              Initiating Scan
-            </span>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00CCFF', animationDelay: '0.3s' }} />
+          style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full"
+            style={{ background: '#fff', border: '1px solid rgba(14,165,233,0.3)', boxShadow: '0 4px 16px rgba(14,165,233,0.15)' }}>
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#0ea5e9' }} />
+            <span className="text-sm font-medium" style={{ color: '#0ea5e9' }}>Initiating scan…</span>
           </div>
         </div>
       )}
 
       {/* ANALYZING */}
       {scanStatus === 'analyzing' && (
-        <div className="absolute inset-x-0 top-0 flex flex-col items-center pt-4 gap-2" style={{ pointerEvents: 'none' }}>
-          {/* Top scanning bar */}
-          <div style={{ width: '90%', height: 2, background: 'rgba(0,204,255,0.12)', borderRadius: 2, overflow: 'hidden' }}>
+        <div className="absolute inset-x-0 top-0 flex flex-col items-center pt-3 gap-2" style={{ pointerEvents: 'none' }}>
+          <div style={{ width: '88%', height: 3, background: 'rgba(255,255,255,0.4)', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, #00CCFF, transparent)',
+              background: 'linear-gradient(90deg, transparent, #0ea5e9, transparent)',
               animation: 'scan-sweep 1.4s ease-in-out infinite',
               width: '40%',
             }} />
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 font-mono text-xs"
-            style={{ background: 'rgba(0,204,255,0.1)', border: '1px solid rgba(0,204,255,0.25)', borderRadius: 999, color: '#00CCFF' }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#00CCFF' }} />
-            ANALYZING · {SCAN_TIMEOUT_MS / 1000}s MAX
+          <div className="flex items-center gap-2 px-3 py-1 text-xs font-medium"
+            style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: 999, color: '#0ea5e9', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#0ea5e9' }} />
+            Analyzing · {SCAN_TIMEOUT_MS / 1000}s max
           </div>
         </div>
       )}
 
       {/* Scanning pulse border */}
       {isScanning && (
-        <div className="absolute inset-0 animate-pulse-border" style={{ borderRadius: 12, pointerEvents: 'none' }} />
+        <div className="absolute inset-0 animate-pulse-border" style={{ borderRadius: 16, pointerEvents: 'none' }} />
       )}
 
       {/* COMPLETE */}
       {scanStatus === 'complete' && (
         <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
-          <div className="flex items-center gap-2 px-5 py-2.5 font-mono text-sm animate-fade-in-up"
+          <div className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium animate-fade-in-up"
             style={{
-              background: 'rgba(0,255,136,0.08)',
-              border: '1px solid rgba(0,255,136,0.3)',
+              background: '#fff',
+              border: '1px solid #bbf7d0',
               borderRadius: 999,
-              color: '#00FF88',
-              letterSpacing: '0.1em',
-              boxShadow: '0 0 20px rgba(0,255,136,0.15)',
+              color: '#16a34a',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}>
-            ✓ SCAN COMPLETE
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            Scan complete
           </div>
         </div>
       )}
@@ -507,12 +497,14 @@ export default function CameraView({
       {/* LIMIT REACHED */}
       {isLimitReached && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center"
-          style={{ background: 'rgba(7,7,15,0.82)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
-          <div style={{ color: '#00CCFF', fontSize: 40 }}>⏹</div>
-          <p className="font-mono text-base font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            100 scan limit reached.
-          </p>
-          <p className="text-sm max-w-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)' }}>
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: '#f3f4f6' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 9h6v6H9z" />
+            </svg>
+          </div>
+          <p className="text-base font-semibold" style={{ color: '#1a1a2e' }}>100 scan limit reached.</p>
+          <p className="text-sm max-w-xs" style={{ color: '#9ca3af' }}>
             This limit exists to control API costs on this demo.
           </p>
         </div>

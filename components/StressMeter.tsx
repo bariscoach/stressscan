@@ -8,7 +8,7 @@ interface Props {
   moodTag: MoodTag | null;
 }
 
-const RADIUS = 58;
+const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function useCountUp(target: number, duration = 500) {
@@ -21,133 +21,126 @@ function useCountUp(target: number, duration = 500) {
     const start = prevRef.current;
     const end = target;
     const startTime = performance.now();
-
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
     const animate = (now: number) => {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(start + (end - start) * eased);
-      setDisplay(current);
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(animate);
-      } else {
-        prevRef.current = end;
-      }
+      const p = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(start + (end - start) * eased));
+      if (p < 1) rafRef.current = requestAnimationFrame(animate);
+      else prevRef.current = end;
     };
     rafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [target, duration]);
 
   return display;
 }
 
+const MOOD_BG: Record<MoodTag, string> = {
+  Calm: '#f0fdf4',
+  Focused: '#fefce8',
+  Tense: '#fff7ed',
+  Overloaded: '#fef2f2',
+};
+
+const MOOD_BORDER: Record<MoodTag, string> = {
+  Calm: '#bbf7d0',
+  Focused: '#fef08a',
+  Tense: '#fed7aa',
+  Overloaded: '#fecaca',
+};
+
 export default function StressMeter({ score, moodTag }: Props) {
   const display = useCountUp(score);
-  const color = getScoreColor(score || 0);
+  const color = score > 0 ? getScoreColor(score) : '#e5e7eb';
   const dashOffset = score > 0 ? CIRCUMFERENCE - (score / 10) * CIRCUMFERENCE : CIRCUMFERENCE;
 
   return (
-    <div
-      className="glass p-5 flex flex-col items-center gap-4"
-      style={{ borderTop: `1px solid rgba(0,204,255,0.2)` }}
-    >
-      <div
-        className="text-xs font-mono uppercase tracking-widest w-full"
-        style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.14em' }}
-      >
-        Stress Level
+    <div className="card p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9ca3af', letterSpacing: '0.1em' }}>
+          Stress Level
+        </span>
+        {moodTag && (
+          <span
+            className="text-xs font-medium px-2.5 py-0.5 rounded-full"
+            style={{
+              background: MOOD_BG[moodTag],
+              color: MOOD_COLORS[moodTag],
+              border: `1px solid ${MOOD_BORDER[moodTag]}`,
+            }}
+          >
+            {moodTag}
+          </span>
+        )}
       </div>
 
-      {/* Arc + number */}
-      <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
-        <svg
-          width="160"
-          height="160"
-          viewBox="0 0 160 160"
-          style={{ position: 'absolute', top: 0, left: 0 }}
-        >
-          {/* Track */}
-          <circle
-            cx="80"
-            cy="80"
-            r={RADIUS}
-            fill="none"
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth="6"
-          />
-          {/* Progress */}
-          <circle
-            cx="80"
-            cy="80"
-            r={RADIUS}
-            fill="none"
-            stroke={color}
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={dashOffset}
-            transform="rotate(-90 80 80)"
-            style={{
-              transition: 'stroke-dashoffset 0.5s ease, stroke 0.4s ease',
-              filter: `drop-shadow(0 0 6px ${color})`,
-            }}
-          />
-        </svg>
+      <div className="flex items-center gap-5">
+        {/* Arc */}
+        <div className="relative flex-shrink-0" style={{ width: 130, height: 130 }}>
+          <svg width="130" height="130" viewBox="0 0 130 130" style={{ position: 'absolute' }}>
+            <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#f3f4f6" strokeWidth="7" />
+            <circle
+              cx="65" cy="65" r={RADIUS}
+              fill="none"
+              stroke={color}
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 65 65)"
+              style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.22,1,0.36,1), stroke 0.4s ease' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span
+              className="font-mono font-semibold leading-none"
+              style={{ fontSize: 48, color: score > 0 ? color : '#d1d5db', transition: 'color 0.4s ease', lineHeight: 1 }}
+            >
+              {score > 0 ? display : '—'}
+            </span>
+            <span className="text-xs font-mono mt-0.5" style={{ color: '#d1d5db' }}>/ 10</span>
+          </div>
+        </div>
 
-        {/* Center content */}
-        <div className="flex flex-col items-center z-10">
-          <span
-            key={display}
-            className="font-mono font-semibold leading-none"
-            style={{
-              fontSize: 72,
-              color: score > 0 ? color : 'rgba(255,255,255,0.15)',
-              transition: 'color 0.4s ease',
-              lineHeight: 1,
-              textShadow: score > 0 ? `0 0 20px ${color}40` : 'none',
-            }}
-          >
-            {score > 0 ? display : '—'}
-          </span>
-          <span
-            className="text-xs font-mono"
-            style={{ color: 'rgba(255,255,255,0.2)', marginTop: 2 }}
-          >
-            / 10
-          </span>
+        {/* Score scale */}
+        <div className="flex flex-col gap-1.5 flex-1">
+          {[
+            { label: 'Relaxed', range: '1–3', color: '#10b981' },
+            { label: 'Focused', range: '4–6', color: '#f59e0b' },
+            { label: 'Tense',   range: '7–8', color: '#f97316' },
+            { label: 'Critical',range: '9–10',color: '#ef4444' },
+          ].map(({ label, range, color: c }) => {
+            const [lo, hi] = range.split('–').map(Number);
+            const active = score >= lo && score <= hi;
+            return (
+              <div key={label} className="flex items-center gap-2">
+                <div
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: active ? c : '#e5e7eb' }}
+                />
+                <span className="text-xs flex-1" style={{ color: active ? '#374151' : '#9ca3af', fontWeight: active ? 600 : 400 }}>
+                  {label}
+                </span>
+                <span className="text-xs font-mono" style={{ color: active ? c : '#d1d5db' }}>
+                  {range}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Mood badge */}
-      {moodTag ? (
-        <div
-          className="px-4 py-1.5 font-mono text-xs font-medium"
-          style={{
-            borderRadius: 999,
-            background: `${MOOD_COLORS[moodTag]}18`,
-            border: `1px solid ${MOOD_COLORS[moodTag]}40`,
-            color: MOOD_COLORS[moodTag],
-            transition: 'all 0.3s ease',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {moodTag}
-        </div>
-      ) : (
-        <div
-          className="px-4 py-1.5 font-mono text-xs"
-          style={{
-            borderRadius: 999,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.2)',
-          }}
-        >
-          Awaiting scan…
+      {/* Bottom bar */}
+      {score > 0 && (
+        <div style={{ height: 4, borderRadius: 2, background: '#f3f4f6', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${score * 10}%`,
+            background: `linear-gradient(90deg, #10b981, ${color})`,
+            borderRadius: 2,
+            transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)',
+          }} />
         </div>
       )}
     </div>

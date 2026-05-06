@@ -194,7 +194,6 @@ function drawVideoCover(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, 
 
 export default function CameraView({ isLimitReached, scansRemaining, scanHistory, lastScore, userEmail, onAnalysis, onLimitReached, onError }: Props) {
   const videoRef       = useRef<HTMLVideoElement>(null);
-  const frozenRef      = useRef<HTMLCanvasElement>(null);
   const overlayRef     = useRef<HTMLCanvasElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
   const rafRef         = useRef<number | null>(null);
@@ -206,6 +205,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
   const [phase,          setPhase]          = useState<ScanPhase>('live');
   const [shutterPressed, setShutterPressed] = useState(false);
   const [borderColor,    setBorderColor]    = useState<string | null>(null);
+  const [frozenDataUrl,  setFrozenDataUrl]  = useState<string | null>(null);
   const [countdown,      setCountdown]      = useState<number | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -235,9 +235,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     const c = containerRef.current;
     if (!c) return;
     const W = c.clientWidth, H = c.clientHeight;
-    [frozenRef, overlayRef].forEach((r) => {
-      if (r.current) { r.current.width = W; r.current.height = H; }
-    });
+    if (overlayRef.current) { overlayRef.current.width = W; overlayRef.current.height = H; }
   }, []);
 
   useEffect(() => {
@@ -334,21 +332,15 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
 
     setPhase('analyzing');
     startCountdown();
-    syncSizes();
 
-    // Save the frame at capture time (for accurate frozen display later)
-    const frozen = frozenRef.current;
-    if (frozen) {
-      const ctx = frozen.getContext('2d')!;
-      drawVideoCover(ctx, video, frozen.width, frozen.height);
-    }
-
-    // Full-res capture for API
+    // Capture frame as data URL — stored in state, immune to canvas clearing
     const offscreen = document.createElement('canvas');
     offscreen.width = video.videoWidth;
     offscreen.height = video.videoHeight;
     offscreen.getContext('2d')!.drawImage(video, 0, 0);
-    const base64 = offscreen.toDataURL('image/jpeg', 0.82).split(',')[1];
+    const dataUrl = offscreen.toDataURL('image/jpeg', 0.88);
+    setFrozenDataUrl(dataUrl);
+    const base64 = dataUrl.split(',')[1];
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SCAN_TIMEOUT_MS);
@@ -391,8 +383,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
   const handleRescan = useCallback(() => {
     if (phase !== 'frozen') return;
     clearOverlay();
-    const frozen = frozenRef.current;
-    if (frozen) frozen.getContext('2d')?.clearRect(0, 0, frozen.width, frozen.height);
+    setFrozenDataUrl(null);
     setBorderColor(null);
     setPhase('live');
   }, [phase, clearOverlay]);
@@ -461,15 +452,17 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
       />
 
       {/* ── Layer 2: Frozen still frame */}
-      <canvas
-        ref={frozenRef}
-        style={{
-          position: 'absolute', inset: 0,
-          width: '100%', height: '100%',
-          opacity: isFrozen ? 1 : 0,
-          transition: 'opacity 0.15s ease',
-        }}
-      />
+      {isFrozen && frozenDataUrl && (
+        <img
+          src={frozenDataUrl}
+          alt=""
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+      )}
 
       {/* ── Layer 3: Signal overlay */}
       <canvas

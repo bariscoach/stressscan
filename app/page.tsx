@@ -159,6 +159,20 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Footer */}
+      <footer
+        className="text-center py-4 px-6 text-xs"
+        style={{ color: '#9ca3af', borderTop: '1px solid rgba(0,0,0,0.05)' }}
+      >
+        StressScan · AI-powered tension analysis ·{' '}
+        <a
+          href="mailto:barishiz@gmail.com"
+          style={{ color: '#0ea5e9', textDecoration: 'none' }}
+        >
+          barishiz@gmail.com
+        </a>
+      </footer>
+
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );

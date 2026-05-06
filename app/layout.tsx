@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'StressScan — Real-time Stress Analysis',
-  description: 'Live webcam stress and tension analysis powered by Claude Vision AI',
+  description: 'Live webcam stress and tension analysis powered by AI',
   appleWebApp: {
     capable: true,
     title: 'StressScan',

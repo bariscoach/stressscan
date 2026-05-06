@@ -73,7 +73,7 @@ export default function Logo({ size = 32, variant = 'full', theme = 'light' }: P
               lineHeight: 1.2,
             }}
           >
-            Claude Vision
+            AI Analysis
           </span>
         </div>
       )}

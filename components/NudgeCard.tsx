@@ -9,6 +9,7 @@ interface Props {
 
 export default function NudgeCard({ nudge, nudgeKey }: Props) {
   const [animating, setAnimating] = useState(false);
+  const [borderReady, setBorderReady] = useState(false);
 
   useEffect(() => {
     if (!nudge) return;
@@ -17,11 +18,32 @@ export default function NudgeCard({ nudge, nudgeKey }: Props) {
     return () => clearTimeout(t);
   }, [nudgeKey, nudge]);
 
+  // Grow the left border from 0 → 100% each time a new nudge arrives
+  useEffect(() => {
+    if (!nudge) return;
+    setBorderReady(false);
+    const t = setTimeout(() => setBorderReady(true), 16);
+    return () => clearTimeout(t);
+  }, [nudgeKey, nudge]);
+
   return (
     <div
-      className="card p-5"
-      style={{ borderLeft: '3px solid #0ea5e9' }}
+      className="card p-5 relative"
+      style={{ overflow: 'hidden' }}
     >
+      {/* Animated left border */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 3,
+          background: '#0ea5e9',
+          height: borderReady ? '100%' : 0,
+          transition: 'height 0.45s cubic-bezier(0.22,1,0.36,1)',
+        }}
+      />
+
       <div className="flex items-center gap-2 mb-3">
         <div
           className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"

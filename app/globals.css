@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -102,15 +102,16 @@ body {
 
 /* Severity bar */
 .severity-bar {
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   background: #f0f0f4;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
   overflow: hidden;
   flex: 1;
 }
 .severity-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   transition: width 0.5s cubic-bezier(0.22,1,0.36,1);
 }
 

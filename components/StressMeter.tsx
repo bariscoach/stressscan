@@ -94,8 +94,15 @@ export default function StressMeter({ score, moodTag }: Props) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span
-              className="font-mono font-semibold leading-none"
-              style={{ fontSize: 48, color: score > 0 ? color : '#d1d5db', transition: 'color 0.4s ease', lineHeight: 1 }}
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 200,
+                fontSize: 52,
+                lineHeight: 1,
+                color: score > 0 ? color : '#d1d5db',
+                transition: 'color 0.4s ease',
+                letterSpacing: '-0.03em',
+              }}
             >
               {score > 0 ? display : '—'}
             </span>

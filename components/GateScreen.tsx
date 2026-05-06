@@ -117,16 +117,58 @@ export default function GateScreen({ onEnter }: Props) {
             </div>
           </div>
 
-          {/* Trust badges */}
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            {['No biometrics', 'Local only', 'Not medical advice'].map((badge) => (
-              <span
-                key={badge}
-                className="text-xs px-2.5 py-1 rounded-full font-medium"
-                style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}
+          {/* Trust section */}
+          <div className="flex flex-col gap-1.5">
+            {[
+              {
+                label: 'No biometric data collected',
+                sub: 'Frames are not stored after analysis',
+                icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                ),
+                accent: '#10b981',
+                bg: '#f0fdf4',
+              },
+              {
+                label: 'Camera data stays local',
+                sub: 'One compressed frame per scan, then discarded',
+                icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                ),
+                accent: '#0ea5e9',
+                bg: '#f0f9ff',
+              },
+              {
+                label: 'Not a medical device',
+                sub: 'AI estimates only — not clinical advice',
+                icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                ),
+                accent: '#f59e0b',
+                bg: '#fffbeb',
+              },
+            ].map(({ label, sub, icon, accent, bg }) => (
+              <div
+                key={label}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                style={{ background: bg, border: `1px solid ${accent}22` }}
               >
-                ✓ {badge}
-              </span>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${accent}18` }}>
+                  {icon}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold" style={{ color: '#374151' }}>{label}</span>
+                  <span className="text-xs" style={{ color: '#9ca3af' }}>{sub}</span>
+                </div>
+              </div>
             ))}
           </div>
 

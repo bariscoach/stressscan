@@ -5,6 +5,9 @@ import { AnalysisResult, Signal, SIGNAL_COLORS, SignalType, getScoreColor } from
 
 interface Props {
   isLimitReached: boolean;
+  scansRemaining: number;
+  scanHistory: number[];
+  lastScore: number | null;
   onAnalysis: (result: AnalysisResult) => void;
   onLimitReached: () => void;
   onError: (msg: string) => void;
@@ -13,6 +16,7 @@ interface Props {
 type ScanPhase = 'live' | 'capturing' | 'analyzing' | 'frozen';
 
 const SCAN_TIMEOUT_MS = 7000;
+const SCAN_TOTAL = 20;
 
 // ─── Canvas helpers ────────────────────────────────────────────────────────────
 
@@ -133,10 +137,10 @@ function drawVideoCover(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, 
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function CameraView({ isLimitReached, onAnalysis, onLimitReached, onError }: Props) {
+export default function CameraView({ isLimitReached, scansRemaining, scanHistory, lastScore, onAnalysis, onLimitReached, onError }: Props) {
   const videoRef       = useRef<HTMLVideoElement>(null);
-  const frozenRef      = useRef<HTMLCanvasElement>(null); // captured still frame
-  const overlayRef     = useRef<HTMLCanvasElement>(null); // signal drawings
+  const frozenRef      = useRef<HTMLCanvasElement>(null);
+  const overlayRef     = useRef<HTMLCanvasElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
   const rafRef         = useRef<number | null>(null);
   const signalsRef     = useRef<Signal[]>([]);
@@ -147,6 +151,7 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
   const [phase,          setPhase]          = useState<ScanPhase>('live');
   const [flash,          setFlash]          = useState(false);
   const [shutterPressed, setShutterPressed] = useState(false);
+  const [borderColor,    setBorderColor]    = useState<string | null>(null);
 
   // ── Camera
   useEffect(() => {
@@ -158,6 +163,16 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
       .catch(() => { if (mountedRef.current) setCameraError(true); });
     return () => { mountedRef.current = false; stream?.getTracks().forEach((t) => t.stop()); };
   }, []);
+
+  // ── Update border color when lastScore changes (after scan)
+  useEffect(() => {
+    if (lastScore !== null && lastScore > 0) {
+      setBorderColor(getScoreColor(lastScore));
+      // Fade back to default after 3s
+      const t = setTimeout(() => setBorderColor(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [lastScore]);
 
   // ── Sync canvas sizes
   const syncSizes = useCallback(() => {
@@ -274,6 +289,7 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
     clearOverlay();
     const frozen = frozenRef.current;
     if (frozen) frozen.getContext('2d')?.clearRect(0, 0, frozen.width, frozen.height);
+    setBorderColor(null);
     setPhase('live');
   }, [phase, clearOverlay]);
 
@@ -298,6 +314,21 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
 
   const isAnalyzing = phase === 'analyzing' || phase === 'capturing';
   const isFrozen    = phase === 'frozen' || phase === 'analyzing' || phase === 'capturing';
+  const scansUsed   = SCAN_TOTAL - scansRemaining;
+  const isApproaching = scansRemaining <= 2 && scansRemaining > 0 && !isLimitReached;
+
+  // Border color: score color when frozen, analyzing color when analyzing, default otherwise
+  const activeBorderColor = isAnalyzing
+    ? 'rgba(14,165,233,0.45)'
+    : (phase === 'frozen' && borderColor)
+      ? `${borderColor}88`
+      : 'rgba(0,0,0,0.1)';
+
+  const activeShadow = isAnalyzing
+    ? '0 0 0 4px rgba(14,165,233,0.1), 0 8px 32px rgba(0,0,0,0.12)'
+    : (phase === 'frozen' && borderColor)
+      ? `0 0 0 4px ${borderColor}22, 0 8px 32px rgba(0,0,0,0.12)`
+      : '0 4px 24px rgba(0,0,0,0.08)';
 
   return (
     <div
@@ -307,11 +338,9 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
         width: '100%',
         aspectRatio: '16/9',
         borderRadius: 16,
-        border: isAnalyzing ? '2px solid rgba(14,165,233,0.45)' : '1px solid rgba(0,0,0,0.1)',
-        boxShadow: isAnalyzing
-          ? '0 0 0 4px rgba(14,165,233,0.1), 0 8px 32px rgba(0,0,0,0.12)'
-          : '0 4px 24px rgba(0,0,0,0.08)',
-        transition: 'border 0.25s ease, box-shadow 0.25s ease',
+        border: `${isAnalyzing || (phase === 'frozen' && borderColor) ? '2px' : '1px'} solid ${activeBorderColor}`,
+        boxShadow: activeShadow,
+        transition: 'border 0.35s ease, box-shadow 0.35s ease',
       }}
     >
       {/* ── Layer 1: Live video (hidden when frozen) */}
@@ -380,7 +409,7 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
         </div>
       )}
 
-      {/* ── FROZEN badge (top-left) */}
+      {/* ── FROZEN / ANALYZING badge (top-left) */}
       {(phase === 'frozen' || isAnalyzing) && (
         <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full"
           style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}>
@@ -389,6 +418,19 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
           </svg>
           <span className="text-xs font-mono font-medium" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em' }}>
             {isAnalyzing ? 'ANALYZING' : 'FROZEN'}
+          </span>
+        </div>
+      )}
+
+      {/* ── Approaching limit warning (top-right badge) */}
+      {isApproaching && phase === 'live' && (
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full animate-fade-in"
+          style={{ background: 'rgba(239,68,68,0.85)', backdropFilter: 'blur(6px)' }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <span className="text-xs font-mono font-medium" style={{ color: '#fff' }}>
+            {scansRemaining} left
           </span>
         </div>
       )}
@@ -414,7 +456,7 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
               <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 9h6v6H9z" />
             </svg>
           </div>
-          <p className="text-base font-semibold" style={{ color: '#1a1a2e' }}>5 free scans used.</p>
+          <p className="text-base font-semibold" style={{ color: '#1a1a2e' }}>{SCAN_TOTAL} free scans used.</p>
           <p className="text-sm max-w-xs" style={{ color: '#9ca3af' }}>
             This limit exists to control API costs on this demo.
           </p>
@@ -431,9 +473,21 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
           WebkitBackdropFilter: 'blur(20px)',
         }}
       >
-        {/* Left label */}
-        <div className="absolute left-5 text-xs font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>
-          {phase === 'live' ? 'tap to scan' : phase === 'frozen' ? 'tap to rescan' : ''}
+        {/* Left: scan counter */}
+        <div className="absolute left-5 flex flex-col items-start">
+          {phase === 'live' && (
+            <span
+              className="text-xs font-mono"
+              style={{ color: isApproaching ? '#f87171' : 'rgba(255,255,255,0.45)' }}
+            >
+              {scansUsed} / {SCAN_TOTAL}
+            </span>
+          )}
+          {phase === 'frozen' && (
+            <span className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              tap to rescan
+            </span>
+          )}
         </div>
 
         {/* Shutter button */}
@@ -451,21 +505,17 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
             padding: 0,
           }}
         >
-          {/* Inner circle / indicator */}
           {isAnalyzing ? (
-            // Spinning arc during analysis
             <svg width="44" height="44" viewBox="0 0 44 44" style={{ animation: 'spin 1s linear infinite' }}>
               <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
               <circle cx="22" cy="22" r="18" fill="none" stroke="white" strokeWidth="3"
                 strokeLinecap="round" strokeDasharray="28 85" />
             </svg>
           ) : phase === 'frozen' ? (
-            // Rescan icon
             <div style={{
               width: 52, height: 52, borderRadius: '50%',
               background: 'rgba(34,197,94,0.2)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'transform 0.1s ease',
             }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M1 4v6h6M23 20v-6h-6" />
@@ -473,7 +523,6 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
               </svg>
             </div>
           ) : (
-            // Normal white shutter disc
             <div style={{
               width: 52, height: 52, borderRadius: '50%',
               background: isLimitReached ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.95)',
@@ -483,22 +532,39 @@ export default function CameraView({ isLimitReached, onAnalysis, onLimitReached,
           )}
         </button>
 
-        {/* Right: analyzing badge */}
-        {isAnalyzing && (
-          <div className="absolute right-5 text-xs font-mono animate-fade-in" style={{ color: '#38bdf8' }}>
-            {SCAN_TIMEOUT_MS / 1000}s max
-          </div>
-        )}
-
-        {/* Right: complete checkmark */}
-        {phase === 'frozen' && (
-          <div className="absolute right-5 flex items-center gap-1.5 animate-fade-in">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            <span className="text-xs font-mono" style={{ color: '#22c55e' }}>Done</span>
-          </div>
-        )}
+        {/* Right: scan history circles OR analyzing badge OR done */}
+        <div className="absolute right-5 flex items-center gap-1.5">
+          {isAnalyzing ? (
+            <span className="text-xs font-mono animate-fade-in" style={{ color: '#38bdf8' }}>
+              {SCAN_TIMEOUT_MS / 1000}s max
+            </span>
+          ) : phase === 'frozen' ? (
+            <div className="flex items-center gap-1.5 animate-fade-in">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              <span className="text-xs font-mono" style={{ color: '#22c55e' }}>Done</span>
+            </div>
+          ) : scanHistory.length > 0 ? (
+            // Scan history circles (last 5)
+            <div className="flex items-center gap-1">
+              {scanHistory.slice(-5).map((score, i) => (
+                <div
+                  key={i}
+                  title={`Score: ${score}`}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: getScoreColor(score),
+                    opacity: 0.7 + (i / scanHistory.slice(-5).length) * 0.3,
+                    boxShadow: `0 0 4px ${getScoreColor(score)}88`,
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -372,13 +372,10 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
       signalsRef.current = (data.signals ?? []).filter((s: Signal) => s.detected);
       hudDataRef.current = { score: data.stress_score ?? 0, mood: data.mood_tag ?? '—', count: signalsRef.current.length };
 
-      // Animate overlay on live video first, then freeze after ~900ms
+      // Freeze immediately, then animate overlay on the still frame
+      setPhase('frozen');
       animateOverlay();
       onAnalysis(data as AnalysisResult);
-      setTimeout(() => {
-        if (!mountedRef.current) return;
-        setPhase('frozen');
-      }, 900);
 
     } catch (err: unknown) {
       clearTimeout(timeoutId);

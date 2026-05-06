@@ -17,7 +17,7 @@ export default function Home() {
   const [gateCleared, setGateCleared] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [scansRemaining, setScansRemaining] = useState(SCAN_TOTAL);
+  const [scansRemaining, setScansRemaining] = useState(5);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [nudgeKey, setNudgeKey] = useState(0);

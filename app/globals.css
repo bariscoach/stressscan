@@ -124,6 +124,11 @@ body {
   animation: count-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+@keyframes scan-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 /* Signal severity bar */
 .severity-bar {
   height: 4px;

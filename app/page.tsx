@@ -11,7 +11,7 @@ import Toast from '@/components/Toast';
 
 export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [scansRemaining, setScansRemaining] = useState(5);
+  const [scansRemaining, setScansRemaining] = useState(100);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [scanInterval, setScanInterval] = useState(5);

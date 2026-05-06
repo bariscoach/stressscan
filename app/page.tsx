@@ -25,13 +25,23 @@ export default function Home() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(GATE_KEY);
-      if (saved) {
+    (async () => {
+      try {
+        const saved = localStorage.getItem(GATE_KEY);
+        if (!saved) return;
         const { email } = JSON.parse(saved);
-        if (email) { setUserEmail(email); setGateCleared(true); }
-      }
-    } catch { /* ignore */ }
+        if (!email) return;
+        // Verify email exists server-side — prevents localStorage spoofing
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const { valid } = await res.json();
+        if (valid) { setUserEmail(email); setGateCleared(true); }
+        else { localStorage.removeItem(GATE_KEY); }
+      } catch { /* ignore — show gate on error */ }
+    })();
   }, []);
 
   const handleEnter = useCallback((email: string) => {

@@ -8,12 +8,13 @@ interface Props {
   scansRemaining: number;
   scanHistory: number[];
   lastScore: number | null;
+  userEmail: string;
   onAnalysis: (result: AnalysisResult) => void;
   onLimitReached: () => void;
   onError: (msg: string) => void;
 }
 
-type ScanPhase = 'live' | 'capturing' | 'analyzing' | 'frozen';
+type ScanPhase = 'live' | 'analyzing' | 'frozen';
 
 const SCAN_TIMEOUT_MS = 7000;
 const SCAN_TOTAL = 20;
@@ -191,7 +192,7 @@ function drawVideoCover(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, 
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function CameraView({ isLimitReached, scansRemaining, scanHistory, lastScore, onAnalysis, onLimitReached, onError }: Props) {
+export default function CameraView({ isLimitReached, scansRemaining, scanHistory, lastScore, userEmail, onAnalysis, onLimitReached, onError }: Props) {
   const videoRef       = useRef<HTMLVideoElement>(null);
   const frozenRef      = useRef<HTMLCanvasElement>(null);
   const overlayRef     = useRef<HTMLCanvasElement>(null);
@@ -203,7 +204,6 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
 
   const [cameraError,    setCameraError]    = useState(false);
   const [phase,          setPhase]          = useState<ScanPhase>('live');
-  const [flash,          setFlash]          = useState(false);
   const [shutterPressed, setShutterPressed] = useState(false);
   const [borderColor,    setBorderColor]    = useState<string | null>(null);
 
@@ -271,22 +271,49 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     hudDataRef.current = null;
   }, []);
 
+  // ── Shutter sound (Web Audio API — no file needed)
+  const playShutterSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      // Mechanical click: short noise burst + quick low thud
+      const bufferSize = ctx.sampleRate * 0.04;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 3200;
+      filter.Q.value = 0.8;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.55, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start();
+      noise.stop(ctx.currentTime + 0.06);
+    } catch { /* ignore — audio not critical */ }
+  }, []);
+
   // ── Shutter pressed
   const handleShutter = useCallback(async () => {
     if (phase !== 'live' || isLimitReached) return;
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
 
-    // Flash + press animation
+    // Press animation + shutter sound
+    playShutterSound();
     setShutterPressed(true);
-    setFlash(true);
     setTimeout(() => setShutterPressed(false), 120);
-    setTimeout(() => setFlash(false), 220);
 
-    setPhase('capturing');
+    setPhase('analyzing');
     syncSizes();
 
-    // Freeze the visible frame into frozenCanvas
+    // Save the frame at capture time (for accurate frozen display later)
     const frozen = frozenRef.current;
     if (frozen) {
       const ctx = frozen.getContext('2d')!;
@@ -300,10 +327,6 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     offscreen.getContext('2d')!.drawImage(video, 0, 0);
     const base64 = offscreen.toDataURL('image/jpeg', 0.82).split(',')[1];
 
-    await new Promise((r) => setTimeout(r, 80));
-    if (!mountedRef.current) return;
-    setPhase('analyzing');
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SCAN_TIMEOUT_MS);
 
@@ -311,7 +334,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64 }),
+        body: JSON.stringify({ image: base64, email: userEmail || undefined }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -324,9 +347,14 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
 
       signalsRef.current = (data.signals ?? []).filter((s: Signal) => s.detected);
       hudDataRef.current = { score: data.stress_score ?? 0, mood: data.mood_tag ?? '—', count: signalsRef.current.length };
+
+      // Animate overlay on live video first, then freeze after ~900ms
       animateOverlay();
       onAnalysis(data as AnalysisResult);
-      setPhase('frozen');
+      setTimeout(() => {
+        if (!mountedRef.current) return;
+        setPhase('frozen');
+      }, 900);
 
     } catch (err: unknown) {
       clearTimeout(timeoutId);
@@ -335,7 +363,7 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
       onError(isAbort ? 'Scan timed out (7s). Try again.' : 'Network error — check your connection.');
       setPhase('live');
     }
-  }, [phase, isLimitReached, syncSizes, animateOverlay, onAnalysis, onLimitReached, onError]);
+  }, [phase, isLimitReached, syncSizes, animateOverlay, playShutterSound, onAnalysis, onLimitReached, onError]);
 
   // ── Rescan: unfreeze, resume live
   const handleRescan = useCallback(() => {
@@ -366,8 +394,8 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
     );
   }
 
-  const isAnalyzing = phase === 'analyzing' || phase === 'capturing';
-  const isFrozen    = phase === 'frozen' || phase === 'analyzing' || phase === 'capturing';
+  const isAnalyzing = phase === 'analyzing';
+  const isFrozen    = phase === 'frozen';
   const scansUsed   = SCAN_TOTAL - scansRemaining;
   const isApproaching = scansRemaining <= 2 && scansRemaining > 0 && !isLimitReached;
 
@@ -425,18 +453,6 @@ export default function CameraView({ isLimitReached, scansRemaining, scanHistory
       <canvas
         ref={overlayRef}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-      />
-
-      {/* ── Layer 4: Camera flash */}
-      <div
-        style={{
-          position: 'absolute', inset: 0,
-          background: '#fff',
-          opacity: flash ? 0.85 : 0,
-          transition: flash ? 'opacity 0s' : 'opacity 0.25s ease',
-          pointerEvents: 'none',
-          borderRadius: 16,
-        }}
       />
 
       {/* ── Scanlines */}

@@ -117,6 +117,7 @@ export default function Home() {
             scansRemaining={scansRemaining}
             scanHistory={scanHistory}
             lastScore={result?.stress_score ?? null}
+            userEmail={userEmail}
             onAnalysis={handleAnalysis}
             onLimitReached={handleLimitReached}
             onError={handleError}

@@ -62,23 +62,34 @@ export async function POST(request: NextRequest) {
   const redis = getRedis();
   let remaining = RATE_LIMIT - 1;
 
-  if (redis) {
-    const key = `ratelimit:ip:${ip}`;
-    const count = (await redis.get<number>(key)) ?? 0;
-
-    if (count >= RATE_LIMIT) {
-      return NextResponse.json({ error: 'limit_reached', remaining: 0 }, { status: 429 });
-    }
-
-    await redis.incr(key);
-    remaining = RATE_LIMIT - (count + 1);
-  }
-
-  let body: { image?: string };
+  let body: { image?: string; email?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
+  }
+
+  if (redis) {
+    // Check and increment both IP and email counters; use the stricter (lower remaining)
+    const ipKey = `ratelimit:ip:${ip}`;
+    const emailKey = body.email ? `ratelimit:email:${body.email.trim().toLowerCase()}` : null;
+
+    const [ipCount, emailCount] = await Promise.all([
+      redis.get<number>(ipKey).then((v) => v ?? 0),
+      emailKey ? redis.get<number>(emailKey).then((v) => v ?? 0) : Promise.resolve(0),
+    ]);
+
+    const maxCount = Math.max(ipCount, emailCount);
+    if (maxCount >= RATE_LIMIT) {
+      return NextResponse.json({ error: 'limit_reached', remaining: 0 }, { status: 429 });
+    }
+
+    await Promise.all([
+      redis.incr(ipKey),
+      emailKey ? redis.incr(emailKey) : Promise.resolve(),
+    ]);
+
+    remaining = RATE_LIMIT - (maxCount + 1);
   }
 
   if (!body.image) {

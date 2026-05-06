@@ -19,7 +19,9 @@ We do not collect, store, process, or retain biometric data of any kind. This in
 Video frames captured by your camera are transmitted in real time to Anthropic's API solely for momentary visual analysis. These frames are not stored, logged, or retained on any server after the API response is returned.
 
 3. YOUR EMAIL ADDRESS
-Your email address is stored exclusively in your browser's local storage. It is not transmitted to any external server, database, or third party. It is used solely to remember that you have agreed to these terms.
+Your email address is collected and stored in a secure server-side database. It is used for the following purposes only: (a) to remember that you have agreed to these terms, (b) to enforce per-user scan limits, and (c) to allow the operator to contact you regarding this application.
+
+Your email address will not be sold, shared with third parties, or used for marketing without your explicit consent. You may request deletion of your email address at any time by contacting barishiz@gmail.com.
 
 4. CAMERA ACCESS
 You voluntarily grant this application access to your camera for the purpose of real-time analysis. You may revoke camera access at any time through your browser settings. Camera data is processed locally in your browser except for the single compressed frame sent to the AI provider per scan.
@@ -112,7 +114,7 @@ export default function GateScreen({ onEnter }: Props) {
               </h1>
               <p className="text-sm leading-relaxed mt-1" style={{ color: '#6b7280' }}>
                 AI-powered tension analysis via your webcam.<br />
-                No biometric data collected. No accounts created.
+                No biometric data collected. Email stored for access control.
               </p>
             </div>
           </div>
@@ -299,7 +301,7 @@ export default function GateScreen({ onEnter }: Props) {
           </form>
 
           <p className="text-center text-xs" style={{ color: '#d1d5db' }}>
-            Email stored locally only · No account created · No biometrics
+            Email stored securely · No passwords · No biometrics
           </p>
         </div>
       </div>
